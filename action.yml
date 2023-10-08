@@ -50,6 +50,9 @@ inputs:
   sonar-token:
     type: string
     required: true
+  sonar-project-key:
+    type: string
+    required: true
 
 runs:
   using: composite
