@@ -87,28 +87,21 @@ runs:
   - name: Cache-SonarCloud-packages
     uses: actions/cache@v3
     with:
-      path: ~\sonar\cache
+      path: ~/sonar/cache
       key: ${{ runner.os }}-sonar
       restore-keys: ${{ runner.os }}-sonar
-  - name: Cache-SonarCloud-Scanner
-    id: cache-sonar-scanner
-    uses: actions/cache@v3
-    with:
-      path: .\.sonar\scanner
-      key: ${{ runner.os }}-sonar-scanner
-      restore-keys: ${{ runner.os }}-sonar-scanner
   - name: Install-SonarCloud-Scanner
     if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
     shell: pwsh
     run: |
-      New-Item -Path .\.sonar\scanner -ItemType Directory
-      dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
+      New-Item -Path ./.sonar/scanner -ItemType Directory
+      dotnet tool install --global dotnet-sonarscanner
   - name: Build and analyze
     env:
       GITHUB_TOKEN: ${{ inputs.git-token }}  # Needed to get PR information, if any
       SONAR_TOKEN: ${{ inputs.sonar-token }}
     shell: pwsh
     run: |
-      .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ inputs.sonar-project-key }}" /o:"dgmjr-io" /d:sonar.token="${{ inputs.sonar-token }}" /d:sonar.host.url="https://sonarcloud.io"
+      dotnet-sonarscanner begin /k:"${{ inputs.sonar-project-key }}" /o:"dgmjr-io" /d:sonar.token="${{ inputs.sonar-token }}" /d:sonar.host.url="https://sonarcloud.io"
        dotnet build Repo/${{ inputs.project-file-path }} --no-restore -c:${{ inputs.configuration }}
-       .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ inputs.sonar-token }}"
+       dotnet-sonarscanner end /d:sonar.token="${{ inputs.sonar-token }}"
