@@ -98,7 +98,7 @@ runs:
     shell: pwsh
     run: |
       New-Item -Path ./.sonar/scanner -ItemType Directory
-      dotnet tool install --global dotnet-sonarscanner
+      dotnet tool update --global dotnet-sonarscanner
   - name: Build and analyze
     env:
       GITHUB_TOKEN: ${{ inputs.git-token }}  # Needed to get PR information, if any
