@@ -99,7 +99,7 @@ runs:
       restore-keys: ${{ runner.os }}-sonar-scanner
   - name: Install-SonarCloud-Scanner
     if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
-    shell: powershell
+    shell: pwsh
     run: |
       New-Item -Path .\.sonar\scanner -ItemType Directory
       dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
@@ -107,7 +107,7 @@ runs:
     env:
       GITHUB_TOKEN: ${{ inputs.git-token }}  # Needed to get PR information, if any
       SONAR_TOKEN: ${{ inputs.sonar-token }}
-    shell: powershell
+    shell: pwsh
     run: |
       .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ inputs.sonar-project-key }}" /o:"dgmjr-io" /d:sonar.token="${{ inputs.sonar-token }}" /d:sonar.host.url="https://sonarcloud.io"
        dotnet build Repo/${{ inputs.project-file-path }} --no-restore -c:${{ inputs.configuration }}
