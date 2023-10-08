@@ -1,0 +1,108 @@
+name: Builds and analyzes the repo with Sonar Cloud Scanner
+author: David G. Moore, Jr., <david@dgmjr.io>
+description: Builds and analyzes the repo with Sonar Cloud Scanner
+
+branding:
+  icon: radio
+  color: orange
+
+inputs:
+  environment:
+    type: string
+    default: Local
+    required: false
+  git-token:
+    type: string
+    required: true
+  git-username:
+    type: string
+    required: false
+    default: dgmjr
+  git-nuget-endpoint:
+    type: string
+    required: false
+    default: https://nuget.pkg.github.com/dgmjr-io/index.json
+  private-nuget-endpoint:
+    type: string
+    required: false
+    default: https://proget.dgmjr.io/nuget/live/v3/index.json
+  private-nuget-api-key:
+    type: string
+    required: false
+    default:
+  nuget-api-key:
+    type: string
+    required: false
+  repo:
+    type: string
+    required: true
+  configuration:
+    type: string
+    required: false
+    default: Release
+  package-version-override:
+    type: string
+    required: false
+    default: 0.0.1
+  project-file-path:
+    type: string
+    required: true
+  sonar-token:
+    type: string
+    required: true
+  sonar-project-key:
+    type: string
+    required: true
+
+runs:
+  using: composite
+  steps:
+  - id: Checkout-the-repository-being-compiled
+    uses: actions/checkout@v3
+    with:
+      repository: ${{ inputs.repo }}
+      path: Repo
+  - id: Checkout-the-Packages-repository-alongside-the-one-being-compiled
+    uses: actions/checkout@v3
+    with:
+      repository: dgmjr-io/Packages
+      path: Packages
+  - id: Run-setup-dgmjrsdk
+    uses: dgmjr-actions/setup-dgmjrsdk@main
+    with:
+      git-token: ${{ inputs.git-token }}
+      environment: Release
+      git-nuget-endpoint: ${{ inputs.git-nuget-endpoint }}
+      private-nuget-endpoint: ${{ inputs.private-nuget-endpoint }}
+      private-nuget-api-key: ${{ inputs.private-nuget-api-key }}
+      repo: ${{ inputs.repo }}
+  - id: Restore-dependencies
+    shell: pwsh
+    run: dotnet restore Repo/${{ inputs.project-file-path }}
+
+############ Begin Sonar Scanner Code ############
+
+  - id: Set-up-JDK-17
+    uses: actions/setup-java@v3
+    with:
+      java-version: 17
+      distribution: 'zulu' # Alternative distribution options are available.
+  - name: Cache-SonarCloud-packages
+    uses: actions/cache@v3
+    with:
+      path: ~/sonar/cache
+      key: ${{ runner.os }}-sonar
+      restore-keys: ${{ runner.os }}-sonar
+  - name: Install-SonarCloud-Scanner
+    if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+    shell: pwsh
+    run: dotnet tool update --global dotnet-sonarscanner
+  - name: Build and analyze
+    env:
+      GITHUB_TOKEN: ${{ inputs.git-token }}  # Needed to get PR information, if any
+      SONAR_TOKEN: ${{ inputs.sonar-token }}
+    shell: pwsh
+    run: |
+      dotnet-sonarscanner begin /k:"${{ inputs.sonar-project-key }}" /o:"dgmjr-io" /d:sonar.token="${{ inputs.sonar-token }}" /d:sonar.host.url="https://sonarcloud.io"
+      dotnet build Repo/${{ inputs.project-file-path }} --no-restore -c:${{ inputs.configuration }}
+      dotnet-sonarscanner end /d:sonar.token="${{ inputs.sonar-token }}"
