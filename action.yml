@@ -90,7 +90,7 @@ runs:
       git-nuget-endpoint: ${{ inputs.git-nuget-endpoint }}
       private-nuget-endpoint: ${{ inputs.private-nuget-endpoint }}
       private-nuget-api-key: ${{ inputs.private-nuget-api-key }}
-      repo: dgmjr-io/DgmjrSdk
+      repo: ${{ inputs.repo }}
     
 ############ Begin Sonar Scanner Code ############
 
