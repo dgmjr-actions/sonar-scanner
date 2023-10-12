@@ -100,5 +100,5 @@ runs:
     shell: pwsh
     run: |
        dotnet-sonarscanner begin /k:"${{ inputs.sonar-project-key }}" /o:"dgmjr-io" /d:sonar.token="${{ inputs.sonar-token }}" /d:sonar.host.url="https://sonarcloud.io"
-       dotnet build Repo/${{ inputs.project-file-path }} --no-restore --configuration ${{ inputs.configuration }}
+       dotnet build Repo/${{ inputs.project-file-path }} --configuration ${{ inputs.configuration }}
        dotnet-sonarscanner end /d:sonar.token="${{ inputs.sonar-token }}"
