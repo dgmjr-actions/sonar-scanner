@@ -57,17 +57,32 @@ inputs:
 runs:
   using: composite
   steps:
-  - id: Checkout-the-repository-being-compiled
-    uses: actions/checkout@v3
+
+############################ Install SonarCloud ############################
+
+  - id: Cache-SonarCloud-packages
+    uses: actions/cache@v3
     with:
-      repository: ${{ inputs.repo }}
-      path: Repo
-  - id: Checkout-the-Packages-repository-alongside-the-one-being-compiled
-    uses: actions/checkout@v3
+      path: ~\sonar\cache
+      key: ${{ runner.os }}-sonar
+      restore-keys: ${{ runner.os }}-sonar
+  - name: Cache-SonarCloud-scanner
+    id: cache-sonar-scanner
+    uses: actions/cache@v3
     with:
-      repository: dgmjr-io/Packages
-      path: Packages
-  - id: Run-setup-dgmjrsdk
+      path: .\.sonar\scanner
+      key: ${{ runner.os }}-sonar-scanner
+      restore-keys: ${{ runner.os }}-sonar-scanner
+  - name: Install-SonarCloud-Scanner
+    if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+    shell: pwsh
+    run: |
+      New-Item -Path .\.sonar\scanner -ItemType Directory
+      dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
+
+############################ Build the Repo ############################
+
+  - id: Build-Using-dgmjrsdk
     uses: dgmjr-actions/setup-dgmjrsdk@main
     with:
       git-token: ${{ inputs.git-token }}
@@ -75,36 +90,16 @@ runs:
       git-nuget-endpoint: ${{ inputs.git-nuget-endpoint }}
       private-nuget-endpoint: ${{ inputs.private-nuget-endpoint }}
       private-nuget-api-key: ${{ inputs.private-nuget-api-key }}
-      repo: ${{ inputs.repo }}
-  - id: Restore-dependencies
-    shell: pwsh
-    run: dotnet restore Repo/${{ inputs.project-file-path }}
+      repo: dgmjr-io/DgmjrSdk
     
 ############ Begin Sonar Scanner Code ############
 
-  - id: Set-up-JDK-17
-    uses: actions/setup-java@v3
-    with:
-      java-version: 17
-      distribution: 'zulu' # Alternative distribution options are available.
-  - name: Cache-SonarCloud-packages
-    uses: actions/cache@v3
-    with:
-      path: ~/sonar/cache
-      key: ${{ runner.os }}-sonar
-      restore-keys: ${{ runner.os }}-sonar
-  - name: Install-SonarCloud-Scanner
-    if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
-    shell: pwsh
-    run: |
-      New-Item -Path ./.sonar/scanner -ItemType Directory
-      dotnet tool update --global dotnet-sonarscanner
   - name: Build and analyze
     env:
       GITHUB_TOKEN: ${{ inputs.git-token }}  # Needed to get PR information, if any
       SONAR_TOKEN: ${{ inputs.sonar-token }}
     shell: pwsh
     run: |
-      dotnet-sonarscanner begin /k:"${{ inputs.sonar-project-key }}" /o:"dgmjr-io" /d:sonar.token="${{ inputs.sonar-token }}" /d:sonar.host.url="https://sonarcloud.io"
-       dotnet build Repo/${{ inputs.project-file-path }} --no-restore -c:${{ inputs.configuration }}
+       dotnet-sonarscanner begin /k:"${{ inputs.sonar-project-key }}" /o:"dgmjr-io" /d:sonar.token="${{ inputs.sonar-token }}" /d:sonar.host.url="https://sonarcloud.io"
+       dotnet build Repo/${{ inputs.project-file-path }} --no-restore --configuration ${{ inputs.configuration }}
        dotnet-sonarscanner end /d:sonar.token="${{ inputs.sonar-token }}"
